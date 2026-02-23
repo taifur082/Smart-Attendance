@@ -1,0 +1,20 @@
+ESP-IDF
+
+The issue is that idf.py is not in your system PATH. You need to run the ESP-IDF export script first to set up the environment variables.
+
+Run this command:
+C:\esp-idf\export.ps1
+
+This will set up all the necessary environment variables including idf.py. After it completes, try again:
+idf.py set-target esp32c6
+
+If you get an execution policy error, run this first:
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+Then run the export script again.
+
+After the export completes successfully, you can proceed with:
+idf.py build
+idf.py -p COM3 flash
+idf.py -p COM3 monitor
+

@@ -1,0 +1,8 @@
+dependencies:
+  # lvgl/lvgl_esp32_drivers: "^0.0.3"
+  # atanisoft/esp_lcd_ili9488:
+  #   version: '>=1.0.9'
+  idf:
+    version: '>=4.4.2'
+  # lvgl/lvgl:
+  #   version: ~8.3.6
