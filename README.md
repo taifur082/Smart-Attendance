@@ -29,13 +29,8 @@ ESP32-C6 (Scanner) → WiFi → Flask Server → PostgreSQL Database
 │   │   ├── sms_service.py
 │   │   └── whatsapp_service.py
 │   └── database/           # Database initialization
-└── components/             # ESP-IDF components
-<<<<<<< HEAD
-    └── UHF-driver/      # UHF RFID reader driver
-=======
-    └── driver is private, so not uploaded     # UHF RFID reader driver
->>>>>>> ae187b7dbaa1af80cc06b4402890c10422b31740
-```
+└── components/             # ESP-IDF component
+    └── driver is private, so not uploaded     
 
 ## Hardware Requirements
 
