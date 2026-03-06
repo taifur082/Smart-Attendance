@@ -30,7 +30,7 @@ ESP32-C6 (Scanner) → WiFi → Flask Server → PostgreSQL Database
 │   │   └── whatsapp_service.py
 │   └── database/           # Database initialization
 └── components/             # ESP-IDF components
-    └── j4210u-driver/      # UHF RFID reader driver
+    └── UHF-driver/      # UHF RFID reader driver
 ```
 
 ## Hardware Requirements
@@ -73,6 +73,15 @@ ESP32-C6 (Scanner) → WiFi → Flask Server → PostgreSQL Database
 - SNTP time synchronization
 - Offline queue support (future enhancement)
 
+### UHF reader "Read command failed"
+
+If the ESP32 logs **"Read command failed"** and **"Failed to get reader settings!"**, the UHF reader is not responding on UART. Try:
+
+1. **Wiring:** Connect ESP32 **TX** (GPIO 17 by default) to the reader’s **RX**, and ESP32 **RX** (GPIO 16) to the reader’s **TX**. If it still fails, try swapping TX and RX.
+2. **Pins:** UART pins are configurable. Run `idf.py menuconfig` → **Component config** → **UHF RFID reader driver** and set **UART TX GPIO** / **UART RX GPIO** to match your board.
+3. **Power:** A 1.5 s startup delay is applied after opening the UART; if your reader needs longer to power up, increase the delay in `main/main.cpp` after `OpenComPort(...)`.
+4. **Baud rate:** The reader is opened at 57600. If your module uses 115200, change the baud in the `OpenComPort("COMX", 57600)` call in `main/main.cpp`.
+
 ## Server Setup
 
 ### Prerequisites
@@ -105,7 +114,14 @@ ESP32-C6 (Scanner) → WiFi → Flask Server → PostgreSQL Database
    python database/init_db.py --seed  # --seed adds test data
    ```
 
-5. **Run server:**
+5. **Clear database (remove dummy/old data):**
+   From the `server` directory:
+   ```bash
+   python -m database.clear_db              # Delete all rows (keeps tables)
+   python -m database.clear_db --recreate   # Drop all tables and recreate (full reset)
+   ```
+
+6. **Run server:**
    ```bash
    python app.py
    ```
@@ -121,15 +137,109 @@ DATABASE_URL=postgresql://user:password@localhost:5432/attendance_db
 # API Authentication
 API_KEY=your-api-key-here
 
-# SMS (Twilio)
+# SMS – custom gateway (api_key, senderid, msg, numbers; schedule_date_time only for scheduled)
+SMS_PROVIDER=custom
+SMS_GATEWAY_URL=https://sms.mygiftcard.top/api/v1/smsapi
+SMS_API_KEY=your-api-key
+SMS_SENDER_ID=8809612442476
+
+# SMS – Twilio (when SMS_PROVIDER=twilio)
 TWILIO_ACCOUNT_SID=your-account-sid
 TWILIO_AUTH_TOKEN=your-auth-token
 TWILIO_PHONE_NUMBER=+1234567890
 
-# WhatsApp (Green API)
+# Notification channel: whatsapp (Green API) or sms (custom/Twilio)
+NOTIFICATION_CHANNEL=whatsapp
+NOTIFICATION_FALLBACK_SMS=true
+
+# WhatsApp (Green API) – see "Green API setup" below
 GREEN_API_ID_INSTANCE=your-instance-id
 GREEN_API_API_TOKEN_INSTANCE=your-api-token
+
+# SMS (when NOTIFICATION_CHANNEL=sms)
+SMS_PROVIDER=custom
+SMS_GATEWAY_URL=https://sms.mygiftcard.top/api/v1/smsapi
+SMS_API_KEY=your-api-key
+SMS_SENDER_ID=8809612442476
 ```
+
+### Green API (WhatsApp) setup and testing
+
+Use [Green API](https://green-api.com) to send attendance notifications via WhatsApp. Both WhatsApp and custom SMS stay available; switch with `NOTIFICATION_CHANNEL`.
+
+#### 1. Get Green API credentials
+
+1. Go to **[green-api.com](https://green-api.com)** and sign up.
+2. Create an **instance** in the dashboard (e.g. “Smart Attendance”).
+3. You will get:
+   - **Instance ID** (e.g. `1101234567`)
+   - **API Token** (long string)
+4. Link your WhatsApp to the instance:
+   - In the dashboard, open your instance and use **“QR code”** or **“Link device”**.
+   - Scan the QR with WhatsApp on your phone (WhatsApp Web style) so the instance can send messages.
+
+#### 2. Configure the server
+
+In `server/.env`:
+
+```env
+NOTIFICATION_CHANNEL=whatsapp
+GREEN_API_ID_INSTANCE=1101234567
+GREEN_API_API_TOKEN_INSTANCE=your-api-token-from-dashboard
+```
+
+Restart the Flask server after changing `.env`.
+
+#### 3. Add a student with WhatsApp number
+
+Parent number must be in international format **without** the `+` (e.g. `8801629334432` for Bangladesh). Green API uses `number@c.us` as chat ID.
+
+```bash
+curl -X POST http://localhost:5000/api/students \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "epc": "E2801190200051187E26CB52",
+    "student_name": "Test Student",
+    "parent_name": "Parent",
+    "parent_phone": "8801629334432",
+    "parent_whatsapp": "8801629334432",
+    "gender": "male"
+  }'
+```
+
+#### 4. Test the flow
+
+1. **Simulate a scan** (use the same EPC as the student):
+
+   ```bash
+   curl -X POST http://localhost:5000/api/attendance/scan \
+     -H "Authorization: Bearer YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "epc": "E2801190200051187E26CB52",
+       "timestamp": "2026-02-26T10:30:00",
+       "rssi": -50,
+       "antenna": 1
+     }'
+   ```
+
+2. Check the server logs for `WhatsApp message sent successfully` or any error.
+3. The parent WhatsApp number should receive:  
+   `Your son Test Student entered the school at 10:30:00.`
+
+#### 5. Switch back to SMS later
+
+When you have `SMS_GATEWAY_URL`, set in `.env`:
+
+```env
+NOTIFICATION_CHANNEL=sms
+SMS_GATEWAY_URL=https://sms.mygiftcard.top/api/v1/smsapi
+SMS_API_KEY=...
+SMS_SENDER_ID=8809612442476
+```
+
+No code changes needed; both systems remain in place and are selected by `NOTIFICATION_CHANNEL`.
 
 ### API Endpoints
 

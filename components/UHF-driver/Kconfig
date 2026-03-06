@@ -1,0 +1,13 @@
+# UHF RFID reader driver (J4210U / 910 / 903) configuration
+
+config UHF_UART_TXD_PIN
+    int "UART TX GPIO pin (connected to reader RX)"
+    default 17
+    help
+        GPIO number for UART TX. Connect this to the UHF reader's RX pin.
+
+config UHF_UART_RXD_PIN
+    int "UART RX GPIO pin (connected to reader TX)"
+    default 16
+    help
+        GPIO number for UART RX. Connect this to the UHF reader's TX pin.

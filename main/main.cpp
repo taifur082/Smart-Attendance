@@ -21,45 +21,36 @@ static const char *TAG = "EPC_SCANNER";
 // Set to 0 for single scan mode (runs once and exits)
 #define CONTINUOUS_SCAN_MODE 1
 
-// Debounce structure
-typedef struct {
-    char epc[65];
-    time_t last_scan_time;
-} epc_debounce_t;
+// Session-based duplicate prevention: each EPC is sent to server at most once per device session (until reboot).
+#define SENT_EPC_LIST_SIZE 256
+static char s_sent_epcs[SENT_EPC_LIST_SIZE][65];
+static int s_sent_count = 0;
+static int s_sent_next = 0;  // For circular overwrite when full
 
-static epc_debounce_t s_last_scans[10];  // Track last 10 unique EPCs
-static int s_debounce_count = 0;
-
-// Check if EPC should be debounced (prevent duplicate scans)
-static bool should_debounce_epc(const char* epc)
+// Returns true if this EPC was already sent this session (should skip to avoid duplicate in DB).
+static bool already_sent_epc(const char* epc)
 {
-    time_t now = time(NULL);
-    
-    // Check if this EPC was scanned recently
-    for (int i = 0; i < s_debounce_count; i++) {
-        if (strcmp(s_last_scans[i].epc, epc) == 0) {
-            if (now - s_last_scans[i].last_scan_time < SCAN_DEBOUNCE_SECONDS) {
-                return true;  // Too soon, debounce
-            }
-            // Update timestamp
-            s_last_scans[i].last_scan_time = now;
-            return false;
+    for (int i = 0; i < s_sent_count; i++) {
+        if (strcmp(s_sent_epcs[i], epc) == 0) {
+            return true;
         }
     }
-    
-    // New EPC, add to debounce list
-    if (s_debounce_count < 10) {
-        strncpy(s_last_scans[s_debounce_count].epc, epc, sizeof(s_last_scans[s_debounce_count].epc) - 1);
-        s_last_scans[s_debounce_count].last_scan_time = now;
-        s_debounce_count++;
-    } else {
-        // Rotate: remove oldest, add new
-        memmove(&s_last_scans[0], &s_last_scans[1], sizeof(epc_debounce_t) * 9);
-        strncpy(s_last_scans[9].epc, epc, sizeof(s_last_scans[9].epc) - 1);
-        s_last_scans[9].last_scan_time = now;
-    }
-    
     return false;
+}
+
+// Mark EPC as sent (call after successfully sending to server).
+static void mark_epc_sent(const char* epc)
+{
+    if (s_sent_count < SENT_EPC_LIST_SIZE) {
+        strncpy(s_sent_epcs[s_sent_count], epc, sizeof(s_sent_epcs[0]) - 1);
+        s_sent_epcs[s_sent_count][sizeof(s_sent_epcs[0]) - 1] = '\0';
+        s_sent_count++;
+    } else {
+        // Circular overwrite of oldest entry
+        strncpy(s_sent_epcs[s_sent_next], epc, sizeof(s_sent_epcs[0]) - 1);
+        s_sent_epcs[s_sent_next][sizeof(s_sent_epcs[0]) - 1] = '\0';
+        s_sent_next = (s_sent_next + 1) % SENT_EPC_LIST_SIZE;
+    }
 }
 
 // Get current timestamp as ISO 8601 string
@@ -71,12 +62,12 @@ static void get_timestamp_string(char* buffer, size_t buffer_size)
     strftime(buffer, buffer_size, "%Y-%m-%dT%H:%M:%S", &timeinfo);
 }
 
-// Send scan data to server
-static void send_scan_to_server(const char* epc, int8_t rssi, uint8_t antenna)
+// Send scan data to server. Returns ESP_OK on success (so caller can mark EPC as sent).
+static esp_err_t send_scan_to_server(const char* epc, int8_t rssi, uint8_t antenna)
 {
     if (!wifi_manager_is_connected()) {
         ESP_LOGW(TAG, "WiFi not connected, skipping server send");
-        return;
+        return ESP_ERR_INVALID_STATE;
     }
     
     scan_data_t scan_data = {};
@@ -89,6 +80,7 @@ static void send_scan_to_server(const char* epc, int8_t rssi, uint8_t antenna)
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to send scan data: %s", http_client_get_last_error());
     }
+    return ret;
 }
 
 extern "C" void app_main(void)
@@ -158,7 +150,9 @@ extern "C" void app_main(void)
         ESP_LOGE(TAG, "Failed to open reader port!");
         return;
     }
-    
+    // Give the reader time to power up and respond (avoids "Read command failed" on first commands)
+    vTaskDelay(pdMS_TO_TICKS(1500));
+
     // Get and configure reader settings
     ReaderInfo ri;
     if (!GetSettings(&ri)) {
@@ -216,12 +210,14 @@ extern "C" void app_main(void)
                         ESP_LOGI(TAG, "  Tag %d: EPC=%s RSSI=%d Ant=%d", 
                                 i + 1, epc_hex, sr.RSSI, sr.ant);
                         
-                        // Check debounce before sending to server
-                        if (!should_debounce_epc(epc_hex)) {
-                            ESP_LOGI(TAG, "  Sending to server...");
-                            send_scan_to_server(epc_hex, sr.RSSI, sr.ant);
+                        // Send to server only if we haven't already sent this EPC this session (avoids duplicate DB entries).
+                        if (already_sent_epc(epc_hex)) {
+                            ESP_LOGI(TAG, "  Skipped (already sent this session)");
                         } else {
-                            ESP_LOGI(TAG, "  Skipped (debounced)");
+                            ESP_LOGI(TAG, "  Sending to server...");
+                            if (send_scan_to_server(epc_hex, sr.RSSI, sr.ant) == ESP_OK) {
+                                mark_epc_sent(epc_hex);
+                            }
                         }
                     }
                 }

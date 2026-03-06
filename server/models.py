@@ -3,12 +3,19 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+# Tag type: 'uhf' = UHF RFID (EPC), 'rc522' = MIFARE (UID)
+TAG_TYPE_UHF = 'uhf'
+TAG_TYPE_RC522 = 'rc522'
+
+
 class Student(db.Model):
-    """Student model - stores student information with EPC as unique identifier"""
+    """Student model - stores student information with (tag_type, epc) as unique identifier"""
     __tablename__ = 'students'
-    
+    __table_args__ = (db.UniqueConstraint('tag_type', 'epc', name='uq_student_tag_type_epc'),)
+
     id = db.Column(db.Integer, primary_key=True)
-    epc = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    tag_type = db.Column(db.String(10), nullable=False, default=TAG_TYPE_UHF, index=True)  # 'uhf' | 'rc522'
+    epc = db.Column(db.String(64), nullable=False, index=True)
     student_name = db.Column(db.String(100), nullable=False)
     parent_name = db.Column(db.String(100))
     parent_phone = db.Column(db.String(20), nullable=False)  # SMS number
@@ -26,6 +33,7 @@ class Student(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            'tag_type': self.tag_type,
             'epc': self.epc,
             'student_name': self.student_name,
             'parent_name': self.parent_name,
@@ -38,9 +46,10 @@ class Student(db.Model):
 class AttendanceLog(db.Model):
     """Attendance log model - stores each scan event"""
     __tablename__ = 'attendance_logs'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False, index=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=True, index=True)  # null when student not found
+    tag_type = db.Column(db.String(10), nullable=False, default=TAG_TYPE_UHF, index=True)  # 'uhf' | 'rc522'
     epc = db.Column(db.String(64), nullable=False, index=True)  # Redundant but useful for queries
     scan_timestamp = db.Column(db.DateTime, nullable=False, index=True)
     rssi = db.Column(db.Integer)
@@ -57,6 +66,7 @@ class AttendanceLog(db.Model):
         return {
             'id': self.id,
             'student_id': self.student_id,
+            'tag_type': self.tag_type,
             'epc': self.epc,
             'scan_timestamp': self.scan_timestamp.isoformat(),
             'rssi': self.rssi,

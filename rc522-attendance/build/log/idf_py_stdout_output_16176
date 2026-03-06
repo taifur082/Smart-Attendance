@@ -1,0 +1,90 @@
+[1/10] Performing build step for 'bootloader'
+[1/1] C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\taifu\Smart Attendance\rc522-attendance\build\bootloader\esp-idf\esptool_py" && C:\Users\taifu\.espressif\python_env\idf5.1_py3.12_env\Scripts\python.exe C:/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x0 "C:/Users/taifu/Smart Attendance/rc522-attendance/build/bootloader/bootloader.bin""
+Bootloader binary size 0x55e0 bytes. 0x2a20 bytes (33%) free.
+[2/10] No install step for 'bootloader'
+[3/10] Completed 'bootloader'
+[4/10] Building CXX object esp-idf/main/CMakeFiles/__idf_main.dir/http_client.cpp.obj
+[5/10] Linking C static library esp-idf\main\libmain.a
+[6/10] Generating ld/sections.ld
+[7/10] Linking CXX executable esp32-c6-rc522-scanner-v1.0.0.elf
+[8/10] Generating binary image from built executable
+esptool.py v4.11.0
+Creating esp32c6 image...
+Merged 3 ELF sections
+Successfully created esp32c6 image.
+Generated C:/Users/taifu/Smart Attendance/rc522-attendance/build/esp32-c6-rc522-scanner-v1.0.0.bin
+[9/10] C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\taifu\Smart Attendance\rc522-attendance\build\esp-idf\esptool_py" && C:\Users\taifu\.espressif\python_env\idf5.1_py3.12_env\Scripts\python.exe C:/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app "C:/Users/taifu/Smart Attendance/rc522-attendance/build/partition_table/partition-table.bin" "C:/Users/taifu/Smart Attendance/rc522-attendance/build/esp32-c6-rc522-scanner-v1.0.0.bin""
+esp32-c6-rc522-scanner-v1.0.0.bin binary size 0xf5480 bytes. Smallest app partition is 0x100000 bytes. 0xab80 bytes (4%) free.
+Warning: The smallest app partition is nearly full (4% free space left)!
+[9/10] C:\WINDOWS\system32\cmd.exe /C "cd /D C:\esp-idf\components\esptool_py && C:\Users\taifu\.espressif\tools\cmake\3.30.2\bin\cmake.exe -D IDF_PATH=C:/esp-idf -D SERIAL_TOOL=C:/Users/taifu/.espressif/python_env/idf5.1_py3.12_env/Scripts/python.exe;;C:/esp-idf/components/esptool_py/esptool/esptool.py;--chip;esp32c6 -D SERIAL_TOOL_ARGS=--before=default_reset;--after=hard_reset;write_flash;@flash_args -D "WORKING_DIRECTORY=C:/Users/taifu/Smart Attendance/rc522-attendance/build" -P C:/esp-idf/components/esptool_py/run_serial_tool.cmake"
+esptool.py --chip esp32c6 -p COM4 -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 80m --flash_size 2MB 0x0 bootloader/bootloader.bin 0x10000 esp32-c6-rc522-scanner-v1.0.0.bin 0x8000 partition_table/partition-table.bin
+esptool.py v4.11.0
+Serial port COM4
+Connecting...
+Chip is ESP32-C6 (QFN40) (revision v0.0)
+Features: Wi-Fi 6, BT 5 (LE), IEEE802.15.4, Single Core + LP Core, 160MHz, Unknown Embedded Flash
+Crystal is 40MHz
+USB mode: USB-Serial/JTAG
+MAC: 54:32:04:ff:fe:0c:bd:3c
+BASE MAC: 54:32:04:0c:bd:3c
+MAC_EXT: ff:fe
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 460800
+Changed.
+Configuring flash size...
+Flash will be erased from 0x00000000 to 0x00005fff...
+Flash will be erased from 0x00010000 to 0x00105fff...
+Flash will be erased from 0x00008000 to 0x00008fff...
+SHA digest in image updated
+Compressed 21984 bytes to 13317...
+Writing at 0x00000000... (100 %)
+Wrote 21984 bytes (13317 compressed) at 0x00000000 in 0.4 seconds (effective 435.8 kbit/s)...
+Hash of data verified.
+Compressed 1004672 bytes to 577496...
+Writing at 0x00010000... (2 %)
+Writing at 0x0001c334... (5 %)
+Writing at 0x00025eec... (8 %)
+Writing at 0x00031b29... (11 %)
+Writing at 0x00038c41... (13 %)
+Writing at 0x00040032... (16 %)
+Writing at 0x000478ce... (19 %)
+Writing at 0x0004ee45... (22 %)
+Writing at 0x00055c65... (25 %)
+Writing at 0x0005cd5f... (27 %)
+Writing at 0x00063aa7... (30 %)
+Writing at 0x0006abd1... (33 %)
+Writing at 0x000718a6... (36 %)
+Writing at 0x0007851f... (38 %)
+Writing at 0x0007e929... (41 %)
+Writing at 0x00085490... (44 %)
+Writing at 0x0008b757... (47 %)
+Writing at 0x000911ac... (50 %)
+Writing at 0x00097616... (52 %)
+Writing at 0x0009da8d... (55 %)
+Writing at 0x000a3bd6... (58 %)
+Writing at 0x000a9b43... (61 %)
+Writing at 0x000afac6... (63 %)
+Writing at 0x000b5cab... (66 %)
+Writing at 0x000bc5b9... (69 %)
+Writing at 0x000c2382... (72 %)
+Writing at 0x000c8ae9... (75 %)
+Writing at 0x000cfed4... (77 %)
+Writing at 0x000d6641... (80 %)
+Writing at 0x000dcfa9... (83 %)
+Writing at 0x000e2cdf... (86 %)
+Writing at 0x000e9146... (88 %)
+Writing at 0x000ef4b4... (91 %)
+Writing at 0x000f646e... (94 %)
+Writing at 0x000fc1e2... (97 %)
+Writing at 0x00102428... (100 %)
+Wrote 1004672 bytes (577496 compressed) at 0x00010000 in 5.3 seconds (effective 1522.4 kbit/s)...
+Hash of data verified.
+Compressed 3072 bytes to 103...
+Writing at 0x00008000... (100 %)
+Wrote 3072 bytes (103 compressed) at 0x00008000 in 0.1 seconds (effective 301.9 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting via RTS pin...

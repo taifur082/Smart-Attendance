@@ -1,0 +1,37 @@
+# RC522 RFID reader driver configuration
+
+config RC522_SPI_MOSI_PIN
+    int "SPI MOSI GPIO pin"
+    default 5
+    help
+        GPIO connected to RC522 MOSI.
+
+config RC522_SPI_MISO_PIN
+    int "SPI MISO GPIO pin"
+    default 4
+    help
+        GPIO connected to RC522 MISO.
+
+config RC522_SPI_SCK_PIN
+    int "SPI SCK GPIO pin"
+    default 6
+    help
+        GPIO connected to RC522 SCK.
+
+config RC522_SPI_CS_PIN
+    int "SPI CS (SDA) GPIO pin"
+    default 7
+    help
+        GPIO connected to RC522 SDA (chip select).
+
+config RC522_RST_PIN
+    int "RST GPIO pin"
+    default 2
+    help
+        GPIO connected to RC522 RST (any free GPIO; do NOT use the board's EN/RST pin).
+
+config RC522_SPI_CLOCK_HZ
+    int "SPI clock speed (Hz)"
+    default 5000000
+    help
+        SPI clock in Hz. 5 MHz is safe for most RC522 breakout boards.

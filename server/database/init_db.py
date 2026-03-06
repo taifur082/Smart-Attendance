@@ -1,20 +1,28 @@
 """
 Database initialization script
-Run this to create database tables and optionally seed with test data
+Run this to create database tables and optionally seed with test data.
+Also runs the tag_type migration so existing DBs get the new schema.
+Usage (from server directory):
+  python -m database.init_db
+  python -m database.init_db --seed
 """
 from app import create_app
-from models import db, Student
+from models import db, Student, TAG_TYPE_UHF, TAG_TYPE_RC522
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def init_database():
-    """Initialize database tables"""
+    """Create tables and apply migrations (e.g. tag_type) for existing DBs."""
     app = create_app()
     with app.app_context():
         db.create_all()
         logger.info("Database tables created successfully")
+        # Ensure existing DBs get tag_type columns and constraint updates
+        from database.migrate_tag_type import migrate
+        migrate()
 
 def seed_test_data():
     """Seed database with test student data"""
@@ -25,9 +33,10 @@ def seed_test_data():
             logger.info("Database already contains data, skipping seed")
             return
         
-        # Add test students
+        # Add test students (tag_type defaults to 'uhf' in model if omitted)
         test_students = [
             {
+                'tag_type': TAG_TYPE_UHF,
                 'epc': 'ABCD00193409009905601234',
                 'student_name': 'John Doe',
                 'parent_name': 'Jane Doe',
@@ -36,6 +45,7 @@ def seed_test_data():
                 'gender': 'male'
             },
             {
+                'tag_type': TAG_TYPE_UHF,
                 'epc': 'E2801190200051187E26CB52',
                 'student_name': 'Alice Smith',
                 'parent_name': 'Bob Smith',

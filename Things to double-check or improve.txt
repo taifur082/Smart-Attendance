@@ -1,0 +1,11 @@
+Things to double-check or improve
+Gateway success semantics
+Success is inferred only from HTTP status 200/201. If your operator’s API returns 200 with a body like {"status": "failed", "message": "Invalid number"}, the code would still report success. If the API documents a success/fail field in the JSON body, it would be more correct to parse the response and use that.
+Phone number format
+Only spaces are stripped. If the operator expects a fixed format (e.g. always with country code like 880...), you may need normalization so values like 01629334432 and +8801629334432 both become what the API expects.
+Empty recipient
+There’s no check for empty phone_number before building the payload. Adding a check (and returning False, "Phone number is required" or similar) would avoid ambiguous gateway errors.
+Message length
+There’s no truncation or check for SMS length (e.g. 160 characters for a single segment). If the operator rejects or behaves oddly for long messages, consider enforcing a max length or splitting.
+Bare except in format_message
+The except: in format_message is very broad. Prefer except Exception: (and optionally log) so you don’t accidentally catch system exits.

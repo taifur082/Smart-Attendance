@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Attendance System — Presentation</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css" />
+  <style>
+    .slide-title { position: absolute; top: 0.5em; left: 0; right: 0; text-align: center; font-size: 0.85em; }
+    .slide-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; text-align: left; font-size: 0.6em; }
+    .slide-footer { position: absolute; bottom: 0.8em; left: 0; right: 0; text-align: center; font-size: 0.45em; opacity: 0.9; }
+    .title-slide .slide-content { text-align: center; }
+    .title-slide .slide-content h1 { font-size: 1.8em; margin-bottom: 0.3em; }
+    .title-slide .slide-content .subtitle { font-size: 0.7em; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5em; }
+    .flow-diagram { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.4em; font-size: 0.5em; }
+    .flow-diagram span { padding: 0.2em 0.5em; background: #333; border-radius: 4px; }
+    .flow-diagram .arrow { opacity: 0.8; }
+    pre.small { font-size: 0.5em; text-align: left; }
+    ul.small { font-size: 0.95em; }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- Slide 1: Title -->
+      <section class="title-slide">
+        <p class="slide-footer" style="position: absolute; bottom: 0.8em; left: 0; right: 0; text-align: center;">ESP32-C6 • UHF RFID • Flask • PostgreSQL • SMS/WhatsApp</p>
+        <div class="slide-content">
+          <h1>Smart Attendance System</h1>
+          <p class="subtitle">IoT-based attendance tracking with RFID and parent notifications</p>
+        </div>
+      </section>
+
+      <!-- Slide 2: System Architecture -->
+      <section>
+        <h2 class="slide-title">System Architecture</h2>
+        <div class="slide-content">
+          <div class="flow-diagram">
+            <span>ESP32-C6 (Scanner)</span><span class="arrow">→</span><span>WiFi</span><span class="arrow">→</span><span>Flask Server</span><span class="arrow">→</span><span>PostgreSQL</span><br/>
+            <span style="margin-left: 2em;"></span><span class="arrow">↘</span><span>SMS Gateway (Twilio)</span><br/>
+            <span style="margin-left: 2em;"></span><span class="arrow">↘</span><span>WhatsApp (Green API)</span>
+          </div>
+        </div>
+        <p class="slide-footer">Single flow: scan at gate → server → DB → parent notification.</p>
+      </section>
+
+      <!-- Slide 3: Hardware and Components -->
+      <section>
+        <h2 class="slide-title">Hardware and Components</h2>
+        <div class="slide-content two-col">
+          <div>
+            • ESP32-C6 development board<br/>
+            • J4210U UHF RFID reader module<br/>
+            • UART (e.g. 57600 baud) between ESP32 and reader
+          </div>
+          <div>
+            • WiFi access point<br/>
+            • RFID tags (EPC) for each student
+          </div>
+        </div>
+        <p class="slide-footer">Each student has a unique EPC; reader reports EPC, RSSI, antenna.</p>
+      </section>
+
+      <!-- Slide 4: Project Structure -->
+      <section>
+        <h2 class="slide-title">Project Structure</h2>
+        <div class="slide-content">
+          <ul class="small">
+            <li><strong>main/</strong> — ESP32-C6 firmware: <code>main.cpp</code>, <code>wifi_manager</code>, <code>http_client</code>, <code>config.h</code></li>
+            <li><strong>server/</strong> — Flask: <code>app.py</code>, <code>models.py</code>, <code>routes.py</code>, <code>config.py</code>, <code>services/</code> (SMS, WhatsApp), <code>database/</code></li>
+            <li><strong>components/UHF-driver/</strong> — UHF RFID driver (driver, 903/910, HAL serial)</li>
+          </ul>
+        </div>
+        <p class="slide-footer">Firmware in C/C++ (ESP-IDF); server in Python.</p>
+      </section>
+
+      <!-- Slide 5: ESP32 Firmware — Startup -->
+      <section>
+        <h2 class="slide-title">ESP32 Firmware — Startup</h2>
+        <div class="slide-content">
+          <ol class="small">
+            <li>NVS init (for WiFi)</li>
+            <li>WiFi manager init and connect (SSID/password from <code>config.h</code>)</li>
+            <li>HTTP client init</li>
+            <li>SNTP init (e.g. pool.ntp.org) — wait for time sync</li>
+            <li>Open UART to reader, GetSettings/SetSettings (e.g. ScanTime 300 ms, BeepOn)</li>
+            <li>Enter main scan loop</li>
+          </ol>
+        </div>
+        <p class="slide-footer">Ref: main/main.cpp app_main().</p>
+      </section>
+
+      <!-- Slide 6: ESP32 — Scan Loop -->
+      <section>
+        <h2 class="slide-title">ESP32 — Scan Loop</h2>
+        <div class="slide-content">
+          <ul class="small">
+            <li>Every cycle: optional WiFi reconnect check → <code>Inventory(false)</code> (UHF driver) → get tag count.</li>
+            <li>For each tag: <code>GetResult()</code> → EPC bytes → convert to hex string; read RSSI, antenna.</li>
+            <li>Debounce: same EPC within <code>SCAN_DEBOUNCE_SECONDS</code> (e.g. 5 s) → skip send.</li>
+            <li>If not debounced: build <code>scan_data_t</code> (EPC, timestamp ISO, rssi, antenna) → <code>http_client_send_scan_data()</code> → POST to SERVER_URL + SERVER_ENDPOINT.</li>
+            <li>Delay 3 s (continuous mode), repeat.</li>
+          </ul>
+        </div>
+        <p class="slide-footer">Timestamp from SNTP; JSON built in http_client.cpp.</p>
+      </section>
+
+      <!-- Slide 7: Scan Payload -->
+      <section>
+        <h2 class="slide-title">Scan Payload (ESP32 → Server)</h2>
+        <div class="slide-content">
+          <p><strong>Endpoint:</strong> POST /api/attendance/scan</p>
+          <p><strong>Header:</strong> Authorization: Bearer &lt;API_KEY&gt;</p>
+          <pre class="small">{"epc": "ABCD...", "timestamp": "2026-02-13T10:30:45", "rssi": 130, "antenna": 1}</pre>
+        </div>
+        <p class="slide-footer">API key and URL in main/config.h; server URL in server/.env / config.</p>
+      </section>
+
+      <!-- Slide 8: Server — Handling a Scan -->
+      <section>
+        <h2 class="slide-title">Server — Handling a Scan</h2>
+        <div class="slide-content">
+          <ol class="small">
+            <li>POST /api/attendance/scan → require_api_key → parse JSON, validate epc.</li>
+            <li>Look up Student by epc (Student.query.filter_by(epc=epc)).</li>
+            <li>If no student: still create AttendanceLog, log error, return 404.</li>
+            <li>If student: check cooldown (same student, notification_sent in last N hours).</li>
+            <li>Create AttendanceLog (student_id, epc, scan_timestamp, rssi, antenna).</li>
+            <li>If not in cooldown: format message (“Your son/daughter &lt;name&gt; entered at &lt;time&gt;”), then send notification.</li>
+            <li>Update log (notification_sent, notification_method), commit, return 200.</li>
+          </ol>
+        </div>
+        <p class="slide-footer">Ref: server/routes.py scan_attendance().</p>
+      </section>
+
+      <!-- Slide 9: Parent Notification Logic -->
+      <section>
+        <h2 class="slide-title">Parent Notification Logic</h2>
+        <div class="slide-content">
+          <ul class="small">
+            <li>Message: “Your son/daughter &lt;name&gt; entered the school at &lt;time&gt;.” (SMSService.format_message; son/daughter by gender).</li>
+            <li>Prefer WhatsApp if configured: WhatsAppService.send_message(parent_whatsapp, message) (Green API).</li>
+            <li>If WhatsApp fails and parent_phone set: fallback SMSService.send_sms(parent_phone, message) (Twilio).</li>
+            <li>Cooldown prevents duplicate notifications for same student within N hours.</li>
+          </ul>
+        </div>
+        <p class="slide-footer">Credentials in server/.env (Green API, Twilio).</p>
+      </section>
+
+      <!-- Slide 10: Database Models -->
+      <section>
+        <h2 class="slide-title">Database Models (PostgreSQL)</h2>
+        <div class="slide-content two-col">
+          <div>
+            <strong>Student:</strong> id, epc (unique), student_name, parent_name, parent_phone, parent_whatsapp, gender, created_at, updated_at.
+          </div>
+          <div>
+            <strong>AttendanceLog:</strong> id, student_id (FK), epc, scan_timestamp, rssi, antenna, notification_sent, notification_method, notification_error, created_at.
+          </div>
+        </div>
+        <p class="slide-footer">ORM: SQLAlchemy; init: python database/init_db.py [--seed].</p>
+      </section>
+
+      <!-- Slide 11: API Endpoints -->
+      <section>
+        <h2 class="slide-title">API Endpoints</h2>
+        <div class="slide-content">
+          <ul class="small">
+            <li>GET /api/health — no auth; server health.</li>
+            <li>POST /api/attendance/scan — Bearer API key; receive scan (JSON above).</li>
+            <li>GET /api/students — Bearer; list students.</li>
+            <li>POST /api/students — Bearer; create student (epc, student_name, parent_phone, optional parent_name, parent_whatsapp, gender).</li>
+            <li>GET /api/attendance/logs — Bearer; list logs (optional: limit, offset, epc).</li>
+          </ul>
+        </div>
+        <p class="slide-footer">All except /api/health require Authorization: Bearer &lt;API_KEY&gt;.</p>
+      </section>
+
+      <!-- Slide 12: End-to-End User Flow -->
+      <section>
+        <h2 class="slide-title">End-to-End User Flow</h2>
+        <div class="slide-content">
+          <div class="flow-diagram" style="margin-bottom: 0.8em;">
+            <span>Student</span><span class="arrow">→</span><span>Reader</span><span class="arrow">→</span><span>ESP32</span><span class="arrow">→</span><span>WiFi</span><span class="arrow">→</span><span>Flask</span><span class="arrow">→</span><span>DB + Notify</span><span class="arrow">→</span><span>Parent</span>
+          </div>
+          <ol class="small">
+            <li>Admin adds students (POST /api/students) with EPC and parent contact.</li>
+            <li>Student wears/brings RFID tag; passes by reader at school.</li>
+            <li>ESP32 scans tag → debounce → POST scan to server.</li>
+            <li>Server finds student, logs attendance, sends WhatsApp or SMS to parent.</li>
+            <li>Parent receives: “Your son/daughter &lt;name&gt; entered the school at &lt;time&gt;.”</li>
+          </ol>
+        </div>
+        <p class="slide-footer">Timeline: student → reader → ESP32 → cloud → parent.</p>
+      </section>
+
+      <!-- Slide 13: Configuration Summary -->
+      <section>
+        <h2 class="slide-title">Configuration Summary</h2>
+        <div class="slide-content two-col">
+          <div>
+            <strong>ESP32 (main/config.h):</strong> WIFI_SSID, WIFI_PASSWORD, SERVER_URL, SERVER_ENDPOINT, API_KEY, SCAN_DEBOUNCE_SECONDS.
+          </div>
+          <div>
+            <strong>Server (.env):</strong> DATABASE_URL, API_KEY, Twilio (SID, token, from number), Green API (instance id, token); optional NOTIFICATION_COOLDOWN_HOURS, PREFER_WHATSAPP.
+          </div>
+        </div>
+        <p class="slide-footer">API_KEY must match on ESP32 and server.</p>
+      </section>
+
+      <!-- Slide 14: Features -->
+      <section>
+        <h2 class="slide-title">Features</h2>
+        <div class="slide-content two-col">
+          <div>
+            <strong>Firmware:</strong> WiFi + retry, HTTP client + retry, EPC debounce, SNTP time, continuous scanning.
+          </div>
+          <div>
+            <strong>Server:</strong> PostgreSQL + SQLAlchemy, REST API, API key auth, SMS (Twilio), WhatsApp (Green API), cooldown, WhatsApp→SMS fallback, error handling and logging.
+          </div>
+        </div>
+        <p class="slide-footer">Security: use HTTPS and strong API keys in production.</p>
+      </section>
+
+      <!-- Slide 15: Summary / Q&A -->
+      <section>
+        <h2 class="slide-title">Summary</h2>
+        <div class="slide-content">
+          <p>Smart Attendance = RFID scan at gate → ESP32 → Flask → DB + parent notification (WhatsApp/SMS).</p>
+          <p>Hardware: ESP32 + UHF reader. Firmware: scan + debounce + HTTP POST. Server: lookup + log + notify.</p>
+        </div>
+        <p class="slide-footer">Questions? — Thank you.</p>
+      </section>
+
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+  <script>
+    Reveal.initialize({
+      hash: true,
+      transition: 'slide',
+      width: 1024,
+      height: 768
+    });
+  </script>
+</body>
+</html>

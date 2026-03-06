@@ -1,4 +1,4 @@
-ESP-IDF
+ESP-IDF And Project Setup
 
 The issue is that idf.py is not in your system PATH. You need to run the ESP-IDF export script first to set up the environment variables.
 
@@ -17,4 +17,24 @@ After the export completes successfully, you can proceed with:
 idf.py build
 idf.py -p COM3 flash
 idf.py -p COM3 monitor
+
+Virtual Environment setup:
+SERVER:
+cd "C:\Users\taifu\Smart Attendance\server"
+.\venv\Scripts\Activate.ps1
+python app.py
+
+DATABASE Setup:
+With your venv active and your current directory set to server, use:
+python -m database.init_db
+python -m database.clear_db
+
+That updates the database with the three demo students for the detected EPCs:
+Then, from server with venv activated:
+python seed_demo_epcs.py
+
+To clear only the attendance log and keep all students, run this from the server folder with your venv activated:
+cd "C:\Users\taifu\Smart Attendance\server"
+.\venv\Scripts\Activate.ps1
+python -c "from app import create_app; from models import db, AttendanceLog; app = create_app(); ctx = app.app_context(); ctx.push(); n = db.session.query(AttendanceLog).delete(); db.session.commit(); print(f'Cleared {n} attendance log(s).')"
 

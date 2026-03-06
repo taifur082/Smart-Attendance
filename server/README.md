@@ -98,3 +98,22 @@ See `.env.example` for all configuration options.
 - Green API free tier: 100 messages/day
 - Notifications have a cooldown period (default: 1 hour) to prevent spam
 - System prefers WhatsApp if available, falls back to SMS
+
+## Troubleshooting: ESP32 cannot connect (ESP_ERR_HTTP_CONNECT)
+
+If the RC522/UHF device shows **Connection failed** or **select() timeout** when posting to this server:
+
+1. **Same network**  
+   ESP32 and the PC running this server must be on the same Wi‑Fi (e.g. both on "Taifur"). In the serial monitor, confirm the ESP32 gets an IP in the same subnet as the server (e.g. server `192.168.43.222` → ESP32 `192.168.43.xxx`).
+
+2. **Allow port 5000 through Windows Firewall** (run PowerShell **as Administrator**):
+   ```powershell
+   New-NetFirewallRule -DisplayName "Flask 5000" -Direction Inbound -LocalPort 5000 -Protocol TCP -Action Allow
+   ```
+   Or: **Windows Security** → **Firewall & network protection** → **Allow an app through firewall** → enable **Python** for **Private** (and **Public** if needed).
+
+3. **Check server URL on the device**  
+   In the firmware `config.h`, `SERVER_URL` must be exactly the server PC’s IP (e.g. `http://192.168.43.222:5000` with no trailing slash). Rebuild and flash after changing.
+
+4. **Test from phone**  
+   On the same Wi‑Fi, open `http://<SERVER_IP>:5000/api/health` in a browser. If you see `{"status":"ok",...}`, the server is reachable; if the ESP32 still fails, the firewall may be blocking the ESP32’s IP.
