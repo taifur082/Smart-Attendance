@@ -15,12 +15,12 @@ ESP32-C6 (Scanner) → WiFi → Flask Server → PostgreSQL Database
 
 ```
 .
-├── main/                    # ESP32-C6 firmware
+├── main/                   # ESP32-C6 firmware
 │   ├── main.cpp            # Main application with scan loop
 │   ├── wifi_manager.cpp/h  # WiFi connection management
 │   ├── http_client.cpp/h   # HTTP client for server communication
 │   └── config.h            # Configuration (WiFi, server URL, etc.)
-├── server/                  # Flask backend server
+├── server/                 # Flask backend server
 │   ├── app.py              # Flask application entry point
 │   ├── models.py           # Database models (SQLAlchemy)
 │   ├── routes.py           # API endpoints
@@ -30,13 +30,17 @@ ESP32-C6 (Scanner) → WiFi → Flask Server → PostgreSQL Database
 │   │   └── whatsapp_service.py
 │   └── database/           # Database initialization
 └── components/             # ESP-IDF components
+<<<<<<< HEAD
     └── UHF-driver/      # UHF RFID reader driver
+=======
+    └── driver is private, so not uploaded     # UHF RFID reader driver
+>>>>>>> ae187b7dbaa1af80cc06b4402890c10422b31740
 ```
 
 ## Hardware Requirements
 
 - ESP32-C6 development board
-- J4210U UHF RFID Reader module
+- UHF RFID Reader module
 - UART connection between ESP32-C6 and RFID reader
 - WiFi access point
 
@@ -358,11 +362,11 @@ curl -X POST http://localhost:5000/api/attendance/scan \
 **WiFi not connecting:**
 - Check SSID and password in `main/config.h`
 - Verify WiFi signal strength
-- Check serial monitor for error messages
+- Check the serial monitor for error messages
 
 **HTTP requests failing:**
 - Verify server URL in `main/config.h`
-- Check server is running and accessible
+- Check the server is running and accessible
 - Verify API key matches server configuration
 
 ### Server Issues
@@ -374,7 +378,7 @@ curl -X POST http://localhost:5000/api/attendance/scan \
 
 **Notifications not sending:**
 - Check API credentials in `.env`
-- Verify phone numbers are in correct format (E.164)
+- Verify phone numbers are in the correct format (E.164)
 - Check server logs for error messages
 
 ## Security Notes
@@ -385,10 +389,3 @@ curl -X POST http://localhost:5000/api/attendance/scan \
 - Implement rate limiting for API endpoints
 - Validate all input data
 
-## License
-
-[Your License Here]
-
-## Contributing
-
-[Contributing Guidelines]
