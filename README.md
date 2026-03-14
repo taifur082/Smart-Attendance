@@ -138,14 +138,14 @@ API_KEY=your-api-key-here
 
 # SMS – custom gateway (api_key, senderid, msg, numbers; schedule_date_time only for scheduled)
 SMS_PROVIDER=custom
-SMS_GATEWAY_URL=https://sms.mygiftcard.top/api/v1/smsapi
+SMS_GATEWAY_URL= your SMS gateway url
 SMS_API_KEY=your-api-key
-SMS_SENDER_ID=8809612442476
+SMS_SENDER_ID=880**********
 
 # SMS – Twilio (when SMS_PROVIDER=twilio)
 TWILIO_ACCOUNT_SID=your-account-sid
 TWILIO_AUTH_TOKEN=your-auth-token
-TWILIO_PHONE_NUMBER=+1234567890
+TWILIO_PHONE_NUMBER=+123*******
 
 # Notification channel: whatsapp (Green API) or sms (custom/Twilio)
 NOTIFICATION_CHANNEL=whatsapp
@@ -157,9 +157,9 @@ GREEN_API_API_TOKEN_INSTANCE=your-api-token
 
 # SMS (when NOTIFICATION_CHANNEL=sms)
 SMS_PROVIDER=custom
-SMS_GATEWAY_URL=https://sms.mygiftcard.top/api/v1/smsapi
+SMS_GATEWAY_URL=your SMS gateway url 
 SMS_API_KEY=your-api-key
-SMS_SENDER_ID=8809612442476
+SMS_SENDER_ID=88*********
 ```
 
 ### Green API (WhatsApp) setup and testing
@@ -183,7 +183,7 @@ In `server/.env`:
 
 ```env
 NOTIFICATION_CHANNEL=whatsapp
-GREEN_API_ID_INSTANCE=1101234567
+GREEN_API_ID_INSTANCE=**********
 GREEN_API_API_TOKEN_INSTANCE=your-api-token-from-dashboard
 ```
 
@@ -201,8 +201,8 @@ curl -X POST http://localhost:5000/api/students \
     "epc": "E2801190200051187E26CB52",
     "student_name": "Test Student",
     "parent_name": "Parent",
-    "parent_phone": "8801629334432",
-    "parent_whatsapp": "8801629334432",
+    "parent_phone": "88016********",
+    "parent_whatsapp": "88016********",
     "gender": "male"
   }'
 ```
@@ -235,7 +235,7 @@ When you have `SMS_GATEWAY_URL`, set in `.env`:
 NOTIFICATION_CHANNEL=sms
 SMS_GATEWAY_URL=https://sms.mygiftcard.top/api/v1/smsapi
 SMS_API_KEY=...
-SMS_SENDER_ID=8809612442476
+SMS_SENDER_ID=8809*******
 ```
 
 No code changes needed; both systems remain in place and are selected by `NOTIFICATION_CHANNEL`.
